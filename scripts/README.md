@@ -59,5 +59,13 @@ Run the script as you would any other.
 
 ```shell
 $ ./hello-zh.scala
+What is your name? tim warnock
+Choose a number between 1 and 10: 5
+你好Tim Warnock
+你好Tim Warnock
+你好Tim Warnock
+你好Tim Warnock
+你好Tim Warnock
+
 ```
 
