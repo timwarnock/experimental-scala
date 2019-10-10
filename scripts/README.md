@@ -1,5 +1,6 @@
 # Scala is a Scripting Language!
-Behold! Scala is a perfectly acceptable shell scripting langauge.
+Behold! 
+Scala is a perfectly usable shell scripting langauge.
 
 Unfortunately, I keep seeing things like this,
 ```scala
