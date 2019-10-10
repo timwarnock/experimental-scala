@@ -15,7 +15,7 @@ HelloWorld.main(args)
 
 ```
 
-Stop that. Seriously. That's a bash script that unecessarily calls *exec scala* -- the effect of this is to fork an additional process for no apparent reason.
+Stop that. Seriously. That's a bash script that unecessarily calls **exec scala** on what looks like shitty Java code -- the effect of this is to fork an additional process for no apparent reason.
 
 Instead, you can simply do this,
 ```scala
