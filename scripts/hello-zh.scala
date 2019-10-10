@@ -3,7 +3,7 @@ import scala.io.StdIn.{readLine}
 
 
 val name = readLine("What is your name? ")
-val nihao = "你好" + name.split(" ").map(_.capitalize).mkString(" ")
+val nihao = "你好 " + name.split(" ").map(_.capitalize).mkString(" ")
 
 val mults = readLine("Choose a number between 1 and 10: ")
 var mult = 1
