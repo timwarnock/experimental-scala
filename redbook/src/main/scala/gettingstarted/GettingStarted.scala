@@ -72,7 +72,8 @@ object Polymorphic {
     go(0)
   }
 
-  /**  scala> partial1(" argh!", (a: String, b: String) => b + a)("hello")
+  /**  scala> val pirate = partial1(" argh!", (a: String, b: String) => b + a)
+   *   scala> pirate("hello")
    *   res1: String = hello argh!
    */
   def partial1[A,B,C](a: A, f: (A,B) => C): B => C =
@@ -101,7 +102,7 @@ object Polymorphic {
    *   six: Int = 6
    *
    *   -OR-
-   *   scala> cal strlen2Uncurried = Function.uncurried(curryLen)
+   *   scala> val strlen2Uncurried = Function.uncurried(curryLen)
    */
   def uncurry[A,B,C](f: A => B => C): (A, B) => C =
     (a, b) => f(a)(b)
