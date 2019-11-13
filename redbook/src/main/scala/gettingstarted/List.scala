@@ -356,6 +356,7 @@ object List { //companion of built-in List
   }
 
   /** 3.24
+   *
    * scala> List.hasSubsequence(List(1,2,3,4), List(2,3))
    * res0: Boolean = true
    *
