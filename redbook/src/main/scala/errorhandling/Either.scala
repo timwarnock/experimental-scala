@@ -1,0 +1,5 @@
+package errorhandling
+
+class Either {
+
+}
