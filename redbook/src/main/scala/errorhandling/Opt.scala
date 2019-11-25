@@ -1,139 +1,151 @@
 package errorhandling
+/**
+ * you can run this in the REPL using :paste rather than :load
+ * e.g.,
+ *
+ * scala> :paste errorhandling/Opt.scala
+ * scala> import errorhandling._
+ * scala> Som("1.5").map(_.toDouble)
+ * res0: errorhandling.Opt[Double] = Som(1.5)
+ *
+ * IF you want to match the built-in names,
+ * scala> import errorhandling.{Opt => Option, Non => None, Som => Some}
+ *
+ */
 
-//TODO does this actually do what it claims to do???
-//hide std library `Option` and `Either`, since we are writing our own in this chapter
-import scala.{Either => _, Option => _, _}
+case object Non extends Opt[Nothing]
+case class Som[+A](get: A) extends Opt[A]
 
-case object None extends Option[Nothing]
-case class Some[+A](get: A) extends Option[A]
-
-sealed trait Option[+A] {
-
+sealed trait Opt[+A] {
   /** 4.1
    *
-   * scala> val foo: MyOption[String] = MySome("1.5")
+   * scala> val foo = Som("1.5")
    *
-   * scala> foo.map(_.toDouble)
-   * res0: MyOption[Double] = Some(1.5)
+   * scala> foo.map(_.toDouble + 1)
+   * res0: errorhandling.Opt[Double] = Som(2.5)
    *
    * scala> foo.getOrElse(0)
-   * res1: ???
+   * res1: Any = 1.5
+   *
+   * scala> foo.flatMap((x: String) => Som(x.toDouble))
+   * res2: errorhandling.Opt[Double] = Som(1.5)
+   *
+   * scala> foo.orElse(Som("ok"))
+   * res3: errorhandling.Opt[String] = Som(1.5)
+   *
+   * scala> foo.filter(_.length > 5)
+   * res4: errorhandling.Opt[String] = Non
+   *
    */
-  def map[B](f: A => B): Option[B] = this match {
-    case None => None
-    case Some(a) => Some(f(a))
+  def map[B](f: A => B): Opt[B] = this match {
+    case Non => Non
+    case Som(a) => Som(f(a))
   }
 
   def getOrElse[B >: A](default: => B): B = this match {
-    case None => default
-    case Some(a: A) => a
+    case Non => default
+    case Som(a) => a
   }
 
-  def flatMap[B](f: A => Option[B]): Option[B] =
-    map(f) getOrElse None
+  def flatMap[B](f: A => Opt[B]): Opt[B] =
+    map(f) getOrElse Non
 
-  /*
-  Of course, we can also implement `flatMap` with explicit pattern matching.
-  */
-  def flatMap_1[B](f: A => Option[B]): Option[B] = this match {
-    case None => None
-    case Some(a) => f(a)
+  def orElse[B >: A](ob: => Opt[B]): Opt[B] =
+    this map (Som(_)) getOrElse ob
+
+  def filter(f: A => Boolean): Opt[A] = this match {
+    case Som(a) if f(a) => this
+    case _ => Non
   }
-
-  def orElse[B >: A](ob: => Option[B]): Option[B] =
-    this map (Some(_)) getOrElse ob
-
-  /*
-  Again, we can implement this with explicit pattern matching.
-  */
-  def orElse_1[B >: A](ob: => Option[B]): Option[B] = this match {
-    case None => ob
-    case _ => this
-  }
-
-  def filter(f: A => Boolean): Option[A] = this match {
-    case Some(a) if f(a) => this
-    case _ => None
-  }
-
-  /*
-  This can also be defined in terms of `flatMap`.
-  */
-  def filter_1(f: A => Boolean): Option[A] =
-    flatMap(a => if (f(a)) Some(a) else None)
-
 }
 
 
 
-object Option {
+object Opt {
 
-  def failingFn(i: Int): Int = {
-    // `val y: Int = ...` declares `y` as having type `Int`, and sets it equal to the right hand side of the `=`.
-    val y: Int = throw new Exception("fail!")
-    try {
-      val x = 42 + 5
-      x + y
-    }
-      // A `catch` block is just a pattern matching block like the ones we've seen. `case e: Exception` is a pattern
-      // that matches any `Exception`, and it binds this value to the identifier `e`. The match returns the value 43.
-    catch { case e: Exception => 43 }
-  }
+  /**
+   * scala> Opt.mean(Seq(1.0,2.0))
+   * res2: Opt[Double] = Som(1.5)
+   *
+   */
+  def mean(xs: Seq[Double]): Opt[Double] =
+    if (xs.isEmpty) Non
+    else Som(xs.sum / xs.length)
 
-  def failingFn2(i: Int): Int = {
-    try {
-      val x = 42 + 5
-      // A thrown Exception can be given any type; here we're annotating it with the type `Int`
-      x + ((throw new Exception("fail!")): Int)
-    }
-    catch { case e: Exception => 43 }
-  }
+
+  /** 4.2
+   *
+   * scala> Opt.variance(Seq(1.5,1,0,-1))
+   * res0: errorhandling.Opt[Double] = Som(0.921875)
+   *
+   */
+  def variance(xs: Seq[Double]): Opt[Double] =
+    mean(xs) flatMap (m => mean(xs.map(x => math.pow(x - m, 2))))
 
 
   /**
-   * scala> MyOption.mean(Seq(1.0,2.0))
-   * res2: MyOption[Double] = MySome(1.5)
+   *
+   * scala> val absO: Opt[Double] => Opt[Double] = Opt.lift(math.abs)
+   * scala> absO(Som(-1.5))
+   * res0: errorhandling.Opt[Double] = Som(1.5)
+   *
+   * scala> Opt.lift(math.abs)(Som(-1))
+   * res1: errorhandling.Opt[Int] = Som(1)
    *
    */
-  def mean(xs: Seq[Double]): Option[Double] =
-    if (xs.isEmpty) None
-    else Some(xs.sum / xs.length)
+  def lift[A,B](f: A => B): Opt[A] => Opt[B] = _ map f
 
 
-
-  def variance(xs: Seq[Double]): Option[Double] =
-    mean(xs) flatMap (m => mean(xs.map(x => math.pow(x - m, 2))))
-
-  // a bit later in the chapter we'll learn nicer syntax for
-  // writing functions like this
-  def map2[A,B,C](a: Option[A], b: Option[B])(f: (A, B) => C): Option[C] =
+  /** 4.3
+   *
+   * scala> Opt.map2(Som(1), Som(2))(_+_)
+   * res0: errorhandling.Opt[Int] = Som(3)
+   *
+   */
+  def map2[A,B,C](a: Opt[A], b: Opt[B])(f: (A, B) => C): Opt[C] =
     a flatMap (aa => b map (bb => f(aa, bb)))
 
-  /*
-  Here's an explicit recursive version:
-  */
-  def sequence[A](a: List[Option[A]]): Option[List[A]] =
+
+  /** 4.4
+   *
+   * scala> Opt.sequence(List(Som(1), Som(2), Som(3)))
+   * res0: errorhandling.Opt[List[Int]] = Som(List(1, 2, 3))
+   *
+   * scala> Opt.sequence(List(Som(1), Som(2), Non, Som(3)))
+   * res1: errorhandling.Opt[List[Int]] = Non
+   *
+   */
+  def sequence[A](a: List[Opt[A]]): Opt[List[A]] =
     a match {
-      case Nil => Some(Nil)
+      case Nil => Som(Nil)
       case h :: t => h flatMap (hh => sequence(t) map (hh :: _))
     }
-  /*
-  It can also be implemented using `foldRight` and `map2`. The type annotation on `foldRight` is needed here; otherwise
-  Scala wrongly infers the result type of the fold as `Some[Nil.type]` and reports a type error (try it!). This is an
-  unfortunate consequence of Scala using subtyping to encode algebraic data types.
-  */
-  def sequence_1[A](a: List[Option[A]]): Option[List[A]] =
-    a.foldRight[Option[List[A]]](Some(Nil))((x, y) => map2(x,y)(_ :: _))
 
-  def traverse[A, B](a: List[A])(f: A => Option[B]): Option[List[B]] =
+  def listify[A](a: List[Opt[A]], default: A): List[A] =
+    for (x <- a) yield x.getOrElse(default)
+
+
+  /** 4.5
+   *
+   * scala> Opt.sequence_1(List(Som(1), Som(2), Som(3)))
+   * res0: errorhandling.Opt[List[Int]] = Som(List(1, 2, 3))
+   *
+   * scala> Opt.sequence_1(List(Som(1), Som(2), Non, Som(3)))
+   * res1: errorhandling.Opt[List[Int]] = Non
+   *
+   */
+  def sequence_1[A](a: List[Opt[A]]): Opt[List[A]] =
+    a.foldRight[Opt[List[A]]](Som(Nil))((x, y) => map2(x,y)(_ :: _))
+
+  def traverse[A, B](a: List[A])(f: A => Opt[B]): Opt[List[B]] =
     a match {
-      case Nil => Some(Nil)
+      case Nil => Som(Nil)
       case h::t => map2(f(h), traverse(t)(f))(_ :: _)
     }
 
-  def traverse_1[A, B](a: List[A])(f: A => Option[B]): Option[List[B]] =
-    a.foldRight[Option[List[B]]](Some(Nil))((h, t) => map2(f(h),t)(_ :: _))
+  def traverse_1[A, B](a: List[A])(f: A => Opt[B]): Opt[List[B]] =
+    a.foldRight[Opt[List[B]]](Som(Nil))((h, t) => map2(f(h),t)(_ :: _))
 
-  def sequenceViaTraverse[A](a: List[Option[A]]): Option[List[A]] =
+  def sequenceViaTraverse[A](a: List[Opt[A]]): Opt[List[A]] =
     traverse(a)(x => x)
 }
