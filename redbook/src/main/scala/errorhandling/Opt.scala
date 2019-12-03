@@ -105,6 +105,12 @@ object Opt {
   def map2[A,B,C](a: Opt[A], b: Opt[B])(f: (A, B) => C): Opt[C] =
     a flatMap (aa => b map (bb => f(aa, bb)))
 
+  def map2_for[A,B,C](a: Opt[A], b: Opt[B])(f: (A, B) => C): Opt[C] =
+    for {
+      aa <- a
+      bb <- b
+    } yield f(aa, bb)
+
 
   /** 4.4
    *
@@ -130,8 +136,8 @@ object Opt {
    * scala> Opt.sequence_1(List(Som(1), Som(2), Som(3)))
    * res0: errorhandling.Opt[List[Int]] = Som(List(1, 2, 3))
    *
-   * scala> Opt.sequence_1(List(Som(1), Som(2), Non, Som(3)))
-   * res1: errorhandling.Opt[List[Int]] = Non
+   * scala> Opt.traverse(List("1", "2", "3"))(x => Som(x.toInt))
+   * res1: errorhandling.Opt[List[Int]] = Som(List(1, 2, 3))
    *
    */
   def sequence_1[A](a: List[Opt[A]]): Opt[List[A]] =
@@ -140,7 +146,7 @@ object Opt {
   def traverse[A, B](a: List[A])(f: A => Opt[B]): Opt[List[B]] =
     a match {
       case Nil => Som(Nil)
-      case h::t => map2(f(h), traverse(t)(f))(_ :: _)
+      case h :: t => map2(f(h), traverse(t)(f))(_ :: _)
     }
 
   def traverse_1[A, B](a: List[A])(f: A => Opt[B]): Opt[List[B]] =
