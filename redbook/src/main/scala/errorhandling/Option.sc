@@ -1,9 +1,9 @@
 
 object app {
 
-
   case object None extends Option[Nothing]
   case class Some[+A](get: A) extends Option[A]
+
   sealed trait Option[+A] {
 
     def map[B](f: A => B): Option[B] = this match {
@@ -23,12 +23,14 @@ object app {
 }
 
 // hide the old
-import scala.{Option => _, Either => _, _}
+import scala.{Option => _}
 
 // import the new
-import app.{Some => Somm}
+import app.{_}
 
 
-val fubar = Somm("1.5")
-fubar.get
-fubar.map((x: String) => x.toDouble + 1.0)
+val foobar = Some("1.5")
+val fubar = None
+fubar.getOrElse(0.0)
+foobar.map((x: String) => x.toDouble + 1.0)
+
